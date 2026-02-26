@@ -1,0 +1,58 @@
+name: Build Executables
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # allows manual trigger from GitHub UI
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: Linux
+            artifact: Z-Match-Linux
+            binary: dist/Z-Match
+
+          - os: windows-latest
+            name: Windows
+            artifact: Z-Match-Windows
+            binary: dist/Z-Match.exe
+
+          - os: macos-latest
+            name: MacOS
+            artifact: Z-Match-MacOS
+            binary: dist/Z-Match
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller pandas fpdf2
+
+      - name: Install tkinter (Linux only)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk
+
+      - name: Build executable
+        run: |
+          pyinstaller --onefile --windowed --name "Z-Match" main.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.binary }}
+          retention-days: 30
